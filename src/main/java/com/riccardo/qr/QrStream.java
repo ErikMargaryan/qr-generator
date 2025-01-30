@@ -139,8 +139,8 @@ public class QrStream {
     // Generate a QR code image from a Base64-encoded string
     private static void generateQRCode(String data, int sliceIndex) throws IOException, WriterException, NotFoundException {
         Map<EncodeHintType, Object> hintMap = new HashMap<>();
-        hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.Q);
-//        hintMap.put(EncodeHintType.MARGIN, 1);
+        hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
+        hintMap.put(EncodeHintType.MARGIN, 1);
         hintMap.put(EncodeHintType.CHARACTER_SET, "UTF-8");
 
         MultiFormatWriter writer = new MultiFormatWriter();
