@@ -2,7 +2,7 @@ package com.riccardo.qr;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-class EncodedBlock {
+public class EncodedBlock {
     public int[] indices;
     public final int k;
     public final int totalBytes;
