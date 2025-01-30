@@ -7,17 +7,12 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Hashtable;
-import java.util.Iterator;
+import java.util.*;
 import java.util.zip.Deflater;
 
 public class QrStream {
@@ -26,30 +21,42 @@ public class QrStream {
     private static final int FREQUENCY_HZ = 20;
     private static final int QR_CODE_SIZE = 500;
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         if (args.length != 1) {
             System.out.println("Usage: java QrStream <file_path>");
             return;
         }
 
-        String filePath = args[0];
-        byte[] fileData = Files.readAllBytes(Paths.get(filePath));
+        try {
+            String filePath = args[0];
+            byte[] fileData = readFile(filePath);
+            byte[] compressedData = compressData(fileData);
+            String contentType = guessContentType(filePath);
+            byte[] dataWithMeta = appendMetaToBuffer(compressedData, filePath, contentType);
 
-        byte[] compressedData = compressData(fileData);
-        String contentType = guessContentType(filePath);
-        byte[] dataWithMeta = appendMetaToBuffer(compressedData, filePath, contentType);
+            // Initialize the LtEncoder
+            LtEncoder encoder = new LtEncoder(dataWithMeta, SLICE_SIZE);
+            Iterator<EncodedBlock> fountain = encoder.fountain();
 
-        // Initialize the LtEncoder with compression enabled
-        LtEncoder encoder = new LtEncoder(dataWithMeta, SLICE_SIZE);
-        Iterator<EncodedBlock> fountain = encoder.fountain();
+            // Generate QR codes for encoded data
+            processEncodedBlocks(fountain);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-        // Limit to one QR code generation
+    private static byte[] readFile(String filePath) throws IOException {
+        return Files.readAllBytes(Paths.get(filePath));
+    }
+
+    private static void processEncodedBlocks(Iterator<EncodedBlock> fountain) throws InterruptedException, IOException, WriterException, NotFoundException {
         int maxSlices = 1; // Set the maximum number of QR codes to generate
-        // Process each encoded block
         int index = 0;
+
         while (fountain.hasNext() && index < maxSlices) {
             EncodedBlock encodedBlock = fountain.next();
             System.out.println("Encoded Data: " + Arrays.toString(encodedBlock.data));
+
             String base64String = encodeToBase64(encodedBlock.data);
             generateQRCode(base64String, index);
 
@@ -59,32 +66,27 @@ public class QrStream {
         }
     }
 
-    // Very naive guess, or you can use probeContentType
+    // Guess content type of the file
     public static String guessContentType(String filename) {
-        // Attempt more robust detection
-        File f = new File(filename);
         try {
-            String probe = URLConnection.guessContentTypeFromName(f.getName());
+            String probe = URLConnection.guessContentTypeFromName(filename);
             if (probe != null) return probe;
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
 
-        // Fallback
+        return getFileExtensionContentType(filename);
+    }
+
+    private static String getFileExtensionContentType(String filename) {
         int idx = filename.lastIndexOf('.');
-        String ext = (idx > 0) ? filename.substring(idx + 1)
-                .toLowerCase() : "";
+        String ext = (idx > 0) ? filename.substring(idx + 1).toLowerCase() : "";
+
         switch (ext) {
-            case "txt":
-                return "text/plain";
-            case "png":
-                return "image/png";
+            case "txt": return "text/plain";
+            case "png": return "image/png";
             case "jpg":
-            case "jpeg":
-                return "image/jpeg";
-            case "pdf":
-                return "application/pdf";
-            default:
-                return "application/octet-stream";
+            case "jpeg": return "image/jpeg";
+            case "pdf": return "application/pdf";
+            default: return "application/octet-stream";
         }
     }
 
@@ -105,10 +107,7 @@ public class QrStream {
         return baos.toByteArray();
     }
 
-    /**
-     * Append a rudimentary "metadata" section to the front:
-     * We store [4-byte length of meta][meta JSON][the actual data]
-     */
+    // Append metadata to the data
     public static byte[] appendMetaToBuffer(byte[] data, String filePath, String contentType) throws IOException {
         File file = new File(filePath);
         String fileName = file.getName();
@@ -155,5 +154,4 @@ public class QrStream {
         ImageIO.write(image, "png", new File(fileName));
         System.out.println("QR code saved to: " + fileName);
     }
-
 }
