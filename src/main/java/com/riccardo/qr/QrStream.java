@@ -3,6 +3,7 @@ package com.riccardo.qr;
 import com.google.zxing.*;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import org.json.JSONObject;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -30,9 +31,9 @@ public class QrStream {
         try {
             String filePath = args[0];
             byte[] fileData = readFile(filePath);
-            byte[] compressedData = compressData(fileData);
+//            byte[] compressedData = compressData(fileData);
             String contentType = guessContentType(filePath);
-            byte[] dataWithMeta = appendMetaToBuffer(compressedData, filePath, contentType);
+            byte[] dataWithMeta = appendMetaToBuffer(fileData, filePath, contentType);
 
             // Initialize the LtEncoder
             LtEncoder encoder = new LtEncoder(dataWithMeta, SLICE_SIZE);
@@ -136,9 +137,10 @@ public class QrStream {
 
     // Generate a QR code image from a Base64-encoded string
     private static void generateQRCode(String data, int sliceIndex) throws IOException, WriterException, NotFoundException {
-        Hashtable<EncodeHintType, Object> hintMap = new Hashtable<>();
-        hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
-        hintMap.put(EncodeHintType.MARGIN, 1);
+        Map<EncodeHintType, Object> hintMap = new HashMap<>();
+        hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.Q);
+//        hintMap.put(EncodeHintType.MARGIN, 1);
+        hintMap.put(EncodeHintType.CHARACTER_SET, "UTF-8");
 
         MultiFormatWriter writer = new MultiFormatWriter();
         BitMatrix bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, QR_CODE_SIZE, QR_CODE_SIZE, hintMap);
