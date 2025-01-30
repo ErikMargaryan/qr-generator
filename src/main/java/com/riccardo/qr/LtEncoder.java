@@ -79,17 +79,6 @@ public class LtEncoder {
         return result;
     }
 
-    @Override
-    public String toString() {
-        return "LtEncoder{" +
-                "blocks=" + blocks +
-                ", k=" + k +
-                ", sliceSize=" + sliceSize +
-                ", data=" + Arrays.toString(data) +
-                ", random=" + random +
-                '}';
-    }
-
     private class FountainIterator implements Iterator<EncodedBlock> {
         @Override
         public boolean hasNext() {
@@ -117,7 +106,7 @@ public class LtEncoder {
             byte[] encodedData = xorBlocks(arrIndices);
 
             // 4) Build EncodedBlock
-            return new EncodedBlock(indicesList,
+            return new EncodedBlock(arrIndices,
                     k,
                     data.length,
                     Arrays.hashCode(data),
