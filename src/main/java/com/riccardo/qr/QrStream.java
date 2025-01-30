@@ -2,10 +2,7 @@ package com.riccardo.qr;
 
 import com.google.zxing.*;
 import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
-import javafx.embed.swing.SwingFXUtils;
-import javafx.scene.image.WritableImage;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -16,8 +13,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.Deflater;
@@ -26,7 +21,7 @@ public class QrStream {
 
     private static final int SLICE_SIZE = 1000;
     private static final int FREQUENCY_HZ = 20;
-    private static final int QR_CODE_SIZE = 400;
+    private static final int QR_CODE_SIZE = 500;
     private static final String urlPrefix = "";
 
     public static void main(String[] args) {
@@ -55,7 +50,7 @@ public class QrStream {
 
     // Reads a file fully into a byte[]
     public static byte[] readFile(String filename) throws IOException {
-        File   file = new File(filename);
+        File file = new File(filename);
         byte[] data = new byte[(int) file.length()];
         try (FileInputStream fis = new FileInputStream(file)) {
             int readBytes = fis.read(data);
@@ -67,20 +62,6 @@ public class QrStream {
     }
 
     private static void processEncodedBlocks(Iterator<EncodedBlock> fountain) throws InterruptedException, IOException, WriterException, NotFoundException {
-//        int maxSlices = 1; // Set the maximum number of QR codes to generate
-//        int index = 0;
-//
-//        while (fountain.hasNext() && index < maxSlices) {
-//            EncodedBlock encodedBlock = fountain.next();
-//            System.out.println("Encoded Data: " + Arrays.toString(encodedBlock.data));
-//
-//            String base64String = encodeToBase64(encodedBlock.data);
-//            generateQRCode(base64String, index);
-//
-//            // Sleep to maintain 20Hz frequency
-//            Thread.sleep(1000 / FREQUENCY_HZ);
-//            index++;
-//        }
         AtomicInteger blockCounter = new AtomicInteger(0);
         EncodedBlock block = fountain.next();
         if (fountain.hasNext()) {
@@ -180,14 +161,13 @@ public class QrStream {
     // Encode slice to Base64 with URL prefix
     private static String encodeToBase64(byte[] data) {
         String base64String = Base64.getEncoder().encodeToString(data);
-//        return "https://qrss.netlify.app//#" + base64String;  // Add prefix
-        return base64String;  // Add prefix
+        return "https://qrss.netlify.app//#" + base64String;  // Add prefix
     }
 
     // Generate a QR code image from a Base64-encoded string
     private static void generateQRCode(String data, int imageSize) throws IOException, WriterException, NotFoundException {
         Map<EncodeHintType, Object> hintMap = new HashMap<>();
-        hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
+        hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
 
         MultiFormatWriter writer = new MultiFormatWriter();
         BitMatrix bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, imageSize, imageSize, hintMap);
