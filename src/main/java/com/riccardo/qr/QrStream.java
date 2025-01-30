@@ -12,6 +12,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -37,9 +38,9 @@ public class QrStream {
         try {
             String filePath = args[0];
             byte[] fileData = readFile(filePath);
-//            byte[] compressedData = compressData(fileData);
+            byte[] compressedData = compressData(fileData);
             String contentType = guessContentType(filePath);
-            byte[] dataWithMeta = appendMetaToBuffer(fileData, filePath, contentType);
+            byte[] dataWithMeta = appendMetaToBuffer(compressedData, filePath, contentType);
 
             // Initialize the LtEncoder
             LtEncoder encoder = new LtEncoder(dataWithMeta, SLICE_SIZE);
@@ -52,8 +53,17 @@ public class QrStream {
         }
     }
 
-    private static byte[] readFile(String filePath) throws IOException {
-        return Files.readAllBytes(Paths.get(filePath));
+    // Reads a file fully into a byte[]
+    public static byte[] readFile(String filename) throws IOException {
+        File   file = new File(filename);
+        byte[] data = new byte[(int) file.length()];
+        try (FileInputStream fis = new FileInputStream(file)) {
+            int readBytes = fis.read(data);
+            if (readBytes != data.length) {
+                throw new IOException("Could not read the entire file: " + filename);
+            }
+        }
+        return data;
     }
 
     private static void processEncodedBlocks(Iterator<EncodedBlock> fountain) throws InterruptedException, IOException, WriterException, NotFoundException {
@@ -170,13 +180,14 @@ public class QrStream {
     // Encode slice to Base64 with URL prefix
     private static String encodeToBase64(byte[] data) {
         String base64String = Base64.getEncoder().encodeToString(data);
-        return "https://qrss.netlify.app//#" + base64String;  // Add prefix
+//        return "https://qrss.netlify.app//#" + base64String;  // Add prefix
+        return base64String;  // Add prefix
     }
 
     // Generate a QR code image from a Base64-encoded string
     private static void generateQRCode(String data, int imageSize) throws IOException, WriterException, NotFoundException {
         Map<EncodeHintType, Object> hintMap = new HashMap<>();
-        hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
+        hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
 
         MultiFormatWriter writer = new MultiFormatWriter();
         BitMatrix bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, imageSize, imageSize, hintMap);
