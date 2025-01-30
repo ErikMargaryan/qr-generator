@@ -42,75 +42,53 @@ public class LtEncoder {
         return out;
     }
 
-    /**
-     * The Ideal Soliton Distribution:
-     * P(d=1) = 1/k
-     * P(d=d) = 1/(d*(d-1))  for d = 2..k
-     */
+    // "Ideal Soliton" distribution
     private int idealSolitonDegree(int k) {
         double[] prob = new double[k];
-        prob[0] = 1.0 / k;
-        for (int d = 2; d <= k; d++) {
-            prob[d - 1] = 1.0 / (d * (d - 1));
+        prob[0] = 1.0/k; // P=1/k for deg=1
+        for (int d=2; d<=k; d++) {
+            prob[d-1] = 1.0/(d*(d-1));
         }
-        // Build cumulative distribution
-        for (int i = 1; i < k; i++) {
-            prob[i] += prob[i - 1];
+        for(int i=1; i<k; i++){
+            prob[i]+=prob[i-1];
         }
         double r = random.nextDouble();
-        for (int i = 0; i < k; i++) {
-            if (r <= prob[i]) {
-                return i + 1;
-            }
+        for(int i=0; i<k; i++){
+            if(r<=prob[i]) return i+1;
         }
-        return k; // fallback
+        return k;
     }
 
-    // XOR the selected blocks
-    private byte[] xorBlocks(int[] indices) {
+    private byte[] xorBlocks(int[] idxs) {
         byte[] result = new byte[sliceSize];
-        for (int idx : indices) {
+        for(int idx : idxs){
             byte[] b = blocks.get(idx);
-            for (int i = 0; i < result.length; i++) {
-                byte val = (i < b.length) ? b[i] : 0;
-                result[i] ^= val;
+            for(int i=0; i<result.length; i++){
+                byte val = (i<b.length)? b[i] : 0;
+                result[i]^=val;
             }
         }
         return result;
     }
 
-    private class FountainIterator implements Iterator<EncodedBlock> {
-        @Override
-        public boolean hasNext() {
-            return true; // infinite
-        }
-
-        @Override
-        public EncodedBlock next() {
-            // 1) Choose degree from the ideal soliton distribution
-            int degree = idealSolitonDegree(k);
-
-            // 2) Randomly pick 'degree' distinct indices
+    class FountainIterator implements Iterator<EncodedBlock> {
+        public boolean hasNext(){return true;}
+        public EncodedBlock next(){
+            int deg = idealSolitonDegree(k);
             Set<Integer> chosen = new HashSet<>();
-            while (chosen.size() < degree) {
+            while(chosen.size()<deg){
                 chosen.add(random.nextInt(k));
             }
-
-            // Efficiently create the indices list
-            List<Integer> indicesList = new ArrayList<>(chosen);
-            Collections.sort(indicesList); // Ensure indices are sorted
-
-            int[] arrIndices = indicesList.stream().mapToInt(Integer::intValue).toArray();
-
-            // 3) XOR them
-            byte[] encodedData = xorBlocks(arrIndices);
-
-            // 4) Build EncodedBlock
-            return new EncodedBlock(arrIndices,
+            int[] arr = chosen.stream().mapToInt(Integer::intValue).sorted().toArray();
+            byte[] xored = xorBlocks(arr);
+            return new EncodedBlock(
+                    arr,
                     k,
                     data.length,
                     Arrays.hashCode(data),
-                    encodedData);
+                    xored
+            );
         }
+
     }
 }
