@@ -106,13 +106,12 @@ public class LtEncoder {
             while (chosen.size() < degree) {
                 chosen.add(random.nextInt(k));
             }
-            int[] arrIndices = chosen.stream()
-                    .mapToInt(Integer::intValue)
-                    .toArray();
-            Arrays.sort(arrIndices);
-            List<Integer> indicesList = new ArrayList<>(arrIndices.length);
-            indicesList.addAll(indicesList);
 
+            // Efficiently create the indices list
+            List<Integer> indicesList = new ArrayList<>(chosen);
+            Collections.sort(indicesList); // Ensure indices are sorted
+
+            int[] arrIndices = indicesList.stream().mapToInt(Integer::intValue).toArray();
 
             // 3) XOR them
             byte[] encodedData = xorBlocks(arrIndices);
