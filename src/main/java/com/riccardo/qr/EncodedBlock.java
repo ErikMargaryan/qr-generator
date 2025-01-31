@@ -10,11 +10,11 @@ public class EncodedBlock {
     public final int checksum;   // CRC32 checksum, calculated later
     public byte[] data;    // The XORed block data
 
-    public EncodedBlock(int[] indices, int k, int totalBytes, int checksum, byte[] data) {
+    public EncodedBlock(int[] indices, int k, int totalBytes, byte[] data) {
         this.indices = indices;
         this.k = k;
         this.totalBytes = totalBytes;
-        this.checksum = checksum;
+        this.checksum = getChecksum(data, k);
         this.data = data;
     }
 
@@ -41,7 +41,7 @@ public class EncodedBlock {
         }
         buf.putInt(k);
         buf.putInt(totalBytes);
-        buf.putInt(getChecksum(data,k));
+        buf.putInt(checksum);
         buf.put(data);
 
         return buf.array();
@@ -84,12 +84,13 @@ public class EncodedBlock {
 
     @Override
     public String toString() {
-        return "EncodedBlock{degree=" + indices.length +
-                ", indices=" + Arrays.toString(indices) +
+        return "EncodedBlock{" +
+                "indices=" + Arrays.toString(indices) +
                 ", k=" + k +
                 ", totalBytes=" + totalBytes +
                 ", checksum=" + checksum +
-                ", dataLen=" + data.length + '}';
+                ", data=" + Arrays.toString(data) +
+                '}';
     }
 }
 
