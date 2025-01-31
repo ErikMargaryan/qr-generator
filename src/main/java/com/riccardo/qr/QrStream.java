@@ -185,8 +185,7 @@ public class QrStream {
     // Encode slice to Base64 with URL prefix
     private static String encodeToBase64(byte[] data) {
         String base64String = Base64.getEncoder().encodeToString(data);
-        return base64String;  // Add prefix
-//        return "https://qrss.netlify.app//#" + base64String;  // Add prefix
+        return "https://qrss.netlify.app//#" + base64String;  // Add prefix
     }
 
     private static void generateQRCode(String data, int imageSize) throws IOException, WriterException, NotFoundException {
