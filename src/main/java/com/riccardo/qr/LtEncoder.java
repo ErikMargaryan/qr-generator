@@ -85,7 +85,6 @@ public class LtEncoder {
                     arr,
                     k,
                     data.length,
-                    Arrays.hashCode(data),
                     xored
             );
         }
