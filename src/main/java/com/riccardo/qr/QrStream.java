@@ -13,6 +13,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.Deflater;
@@ -149,9 +151,12 @@ public class QrStream {
      * (4 bytes little-endian) metaLength + metaBytes
      * (4 bytes little-endian) dataLength + dataBytes
      */
-    public static byte[] appendMetaToBuffer(byte[] compressedData, String filename, String contentType) throws IOException {
+    public static byte[] appendMetaToBuffer(byte[] compressedData, String filePath, String contentType) throws IOException {
+        Path path = Paths.get(filePath);
+        String fileName = path.getFileName().toString();
+
         // 1) JSON meta
-        String metaJson = "{\"filename\":\"" + filename + "\",\"contentType\":\"" + contentType + "\"}";
+        String metaJson = "{\"filename\":\"" + fileName + "\",\"contentType\":\"" + contentType + "\"}";
         byte[] metaBytes = metaJson.getBytes();
         System.out.println("Meta JSON: " + metaJson);
 
