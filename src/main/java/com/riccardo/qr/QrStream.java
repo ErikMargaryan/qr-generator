@@ -77,9 +77,9 @@ public class QrStream {
         String base64String = encodeToBase64(blockBinary);
         // Optionally prefix with a URL or "myapp://"
         String finalData = urlPrefix + base64String;
-//        int num = block.incrementAndGet();
+        int num = blockCounter.incrementAndGet();
 
-        System.out.println("Block #"+000+", base64Len="+base64String.length());
+        System.out.println("Block #" + num + ", base64Len=" + base64String.length());
         // -- LOGGING: block info for debugging
         int currentBlockNum = blockCounter.incrementAndGet();
         System.out.println("----------------------------------------------------");
@@ -129,9 +129,6 @@ public class QrStream {
         }
     }
 
-    /**
-     * Compress with Deflater (BEST_COMPRESSION).
-     */
     public static byte[] compressData(byte[] data) throws IOException {
         // Use try-with-resources to automatically handle ByteArrayOutputStream resource
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
@@ -155,8 +152,7 @@ public class QrStream {
      * (4 bytes little-endian) dataLength + dataBytes
      */
     public static byte[] appendMetaToBuffer(byte[] compressedData, String filePath, String contentType) throws IOException {
-        Path path = Paths.get(filePath);
-        String fileName = path.getFileName().toString();
+        String fileName = Paths.get(filePath).getFileName().toString();
 
         // 1) Construct the JSON meta with the file name and content type
         String metaJson = "{\"filename\":\"" + fileName + "\",\"contentType\":\"" + contentType + "\"}";
