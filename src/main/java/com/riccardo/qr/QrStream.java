@@ -4,7 +4,7 @@ import com.google.zxing.*;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
-import javax.imageio.ImageIO;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -24,6 +24,9 @@ public class QrStream {
     private static final int QR_CODE_SIZE = 500;
     private static final String urlPrefix = "";
 
+    private static JFrame frame;
+    private static JLabel label;
+
     public static void main(String[] args) {
         if (args.length != 1) {
             System.out.println("Usage: java QrStream <file_path>");
@@ -31,6 +34,9 @@ public class QrStream {
         }
 
         try {
+            // Initialize the JFrame and JLabel
+            initializeFrame();
+
             String filePath = args[0];
             byte[] fileData = readFile(filePath);
             byte[] compressedData = compressData(fileData);
@@ -46,6 +52,15 @@ public class QrStream {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private static void initializeFrame() {
+        frame = new JFrame("QR Code");
+        label = new JLabel();
+        frame.getContentPane().add(label);
+        frame.pack();
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
     }
 
     /**
@@ -65,33 +80,36 @@ public class QrStream {
 
     private static void processEncodedBlocks(Iterator<EncodedBlock> fountain) throws InterruptedException, IOException, WriterException, NotFoundException {
         AtomicInteger blockCounter = new AtomicInteger(0);
-        EncodedBlock block = fountain.next();
 
-        // Convert this block to the same "binary" format that
-        // the front-end code expects. Then base64-encode it for QR.
-        byte[] blockBinary = block.toBinary();
-        String base64String = encodeToBase64(blockBinary);
-        // Optionally prefix with a URL or "myapp://"
-        String finalData = urlPrefix + base64String;
-        int num = blockCounter.incrementAndGet();
+        while (true) {
+            EncodedBlock block = fountain.next();
 
-        System.out.println("Block #" + num + ", base64Len=" + base64String.length());
-        // -- LOGGING: block info for debugging
-        int currentBlockNum = blockCounter.incrementAndGet();
-        System.out.println("----------------------------------------------------");
-        System.out.println("Block #" + currentBlockNum);
-        System.out.println("EncodedBlock: " + block);
-        System.out.println("Binary block length: " + blockBinary.length + " bytes");
-        System.out.println("Base64 length:       " + base64String.length() + " chars");
-        System.out.println("Final QR data:       " + (finalData.length() <= 80
-                ? finalData
-                : finalData.substring(0, 80) + "...(truncated)"));
-        System.out.println("----------------------------------------------------");
+            // Convert this block to the same "binary" format that
+            // the front-end code expects. Then base64-encode it for QR.
+            byte[] blockBinary = block.toBinary();
+            String base64String = encodeToBase64(blockBinary);
+            // Optionally prefix with a URL or "myapp://"
+            String finalData = urlPrefix + base64String;
+            int num = blockCounter.incrementAndGet();
 
-        generateQRCode(base64String, QR_CODE_SIZE);
+            System.out.println("Block #" + num + ", base64Len=" + base64String.length());
+            // -- LOGGING: block info for debugging
+            int currentBlockNum = blockCounter.incrementAndGet();
+            System.out.println("----------------------------------------------------");
+            System.out.println("Block #" + currentBlockNum);
+            System.out.println("EncodedBlock: " + block);
+            System.out.println("Binary block length: " + blockBinary.length + " bytes");
+            System.out.println("Base64 length:       " + base64String.length() + " chars");
+            System.out.println("Final QR data:       " + (finalData.length() <= 80
+                    ? finalData
+                    : finalData.substring(0, 80) + "...(truncated)"));
+            System.out.println("----------------------------------------------------");
 
-        // Sleep to maintain 20Hz frequency
-        Thread.sleep(1000 / FREQUENCY_HZ);
+            generateQRCode(base64String, QR_CODE_SIZE);
+
+            // Sleep to maintain 20Hz frequency
+            Thread.sleep(1000 / FREQUENCY_HZ);
+        }
 
     }
 
@@ -188,6 +206,7 @@ public class QrStream {
         MultiFormatWriter writer = new MultiFormatWriter();
         BitMatrix bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, imageSize, imageSize, hintMap);
 
+        // Create a BufferedImage from the BitMatrix
         BufferedImage image = new BufferedImage(imageSize, imageSize, BufferedImage.TYPE_INT_RGB);
         for (int i = 0; i < imageSize; i++) {
             for (int j = 0; j < imageSize; j++) {
@@ -195,9 +214,11 @@ public class QrStream {
             }
         }
 
-        String fileName = "QRCode_Slice_" + imageSize + ".png";
-        ImageIO.write(image, "png", new File(fileName));
-        System.out.println("QR code saved to: " + fileName);
+        // Update the JLabel with the new QR code image
+        label.setIcon(new ImageIcon(image));
+        frame.pack(); // Resize the frame to fit the new image
+
+        System.out.println("QR code displayed on screen.");
     }
 
 }
