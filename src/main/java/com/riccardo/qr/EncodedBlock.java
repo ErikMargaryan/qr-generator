@@ -1,6 +1,7 @@
 package com.riccardo.qr;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 
 public class EncodedBlock {
@@ -35,7 +36,7 @@ public class EncodedBlock {
                 + 4; // checksum
 
         ByteBuffer buf = ByteBuffer.allocate(headerSize + dataLength);
-        buf.order(java.nio.ByteOrder.LITTLE_ENDIAN); // Set to little-endian
+        buf.order(ByteOrder.LITTLE_ENDIAN); // Set to little-endian
         buf.putInt(degree);
         for (int index : indices) {
             buf.putInt(index);
