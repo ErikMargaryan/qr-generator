@@ -126,9 +126,8 @@ public class QrStream {
     }
 
     public static byte[] compressData(byte[] data) throws IOException {
-        // Use try-with-resources to automatically handle ByteArrayOutputStream resource
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            Deflater deflater = new Deflater(Deflater.BEST_COMPRESSION);
+            Deflater deflater = new Deflater(Deflater.NO_FLUSH, true);
             deflater.setInput(data);
             deflater.finish();
 
@@ -154,11 +153,13 @@ public class QrStream {
         String metaJson = "{\"filename\":\"" + fileName + "\",\"contentType\":\"" + contentType + "\"}";
         byte[] metaBytes = metaJson.getBytes(StandardCharsets.UTF_8); // Explicit UTF-8 encoding
         System.out.println("Meta JSON: " + metaJson);
+        System.out.println("Meta Bytes: " + Arrays.toString(metaBytes));
+        System.out.println("Meta Bytes Length: " + metaBytes.length);
 
         // 2) Combine meta and data into a ByteBuffer with little-endian ordering
         try {
             int totalLen = 4 + metaBytes.length + 4 + compressedData.length; // Total length
-            ByteBuffer buf = ByteBuffer.allocate(totalLen).order(ByteOrder.LITTLE_ENDIAN);
+            ByteBuffer buf = ByteBuffer.allocate(totalLen).order(ByteOrder.BIG_ENDIAN);
 
             // Write meta chunk
             buf.putInt(metaBytes.length); // 4 bytes for meta chunk length
