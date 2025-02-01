@@ -8,15 +8,14 @@ public class EncodedBlock {
     public int[] indices;
     public final int k;
     public final int totalBytes;
-    public final int checksum;   // CRC32 checksum, calculated later
+    public final int checksum;   // CRC32 checksum, calculated outside
     public byte[] data;    // The XORed block data
 
-    public EncodedBlock(int[] indices, int k, int totalBytes, byte[] data) {
+    public EncodedBlock(int[] indices, int k, int totalBytes, int checksum, byte[] data) {
         this.indices = indices;
         this.k = k;
         this.totalBytes = totalBytes;
-        this.checksum = getChecksum(data, k);
-//        this.checksum = 1161127537;
+        this.checksum = checksum;
         this.data = data;
     }
 

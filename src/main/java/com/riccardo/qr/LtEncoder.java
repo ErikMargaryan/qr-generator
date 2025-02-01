@@ -3,21 +3,20 @@ package com.riccardo.qr;
 import java.util.*;
 
 public class LtEncoder {
-
     public final List<byte[]> blocks;   // The original data slices
     public final int k;                // Number of slices
     public final int sliceSize;
-
     private final byte[] data;         // The entire input data
     private final Random random;
+    private final int checksum;        // Checksum of the original data
 
-    //
     public LtEncoder(byte[] data, int sliceSize) {
         this.data = data;
         this.sliceSize = sliceSize;
         this.blocks = sliceData(data, sliceSize);
         this.k = blocks.size();
         this.random = new Random();
+        this.checksum = EncodedBlock.getChecksum(data, k); // Calculate checksum here
     }
 
     // Return an infinite iterator of encoded blocks
@@ -88,9 +87,9 @@ public class LtEncoder {
                     arr,
                     k,
                     data.length,
+                    checksum, // Pass the pre-calculated checksum
                     xored
             );
         }
-
     }
 }
