@@ -15,8 +15,8 @@ public class EncodedBlock {
         this.indices = indices;
         this.k = k;
         this.totalBytes = totalBytes;
-//        this.checksum = getChecksum(data, k);
-        this.checksum = 1161127537;
+        this.checksum = getChecksum(data, k);
+//        this.checksum = 1161127537;
         this.data = data;
     }
 
