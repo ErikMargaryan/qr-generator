@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 
-public class EncodedBlock {
+class EncodedBlock {
     private static final int POLYNOMIAL = 0xEDB88320;
     private static final int[] CRC_TABLE = new int[256];
 
@@ -15,8 +15,9 @@ public class EncodedBlock {
     public final int k;
     public final int totalBytes;
     public final int checksum;
-    public int[] indices;
-    public byte[] data;
+    public final int[] indices;
+    public final byte[] data;
+
     public EncodedBlock(int[] indices, int k, int totalBytes, int checksum, byte[] data) {
         this.indices = indices;
         this.k = k;
@@ -41,24 +42,17 @@ public class EncodedBlock {
 
     public static int getChecksum(byte[] data, int k) {
         int crc = 0xFFFFFFFF;
-
         for (byte b : data) {
             int byteValue = b & 0xFF;
             crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ byteValue) & 0xFF];
         }
-
         return (crc ^ k ^ 0xFFFFFFFF) & 0xFFFFFFFF;
     }
 
     public byte[] toBinary() {
         int degree = indices.length;
         int dataLength = data.length;
-
-        int headerSize = 4
-                + 4 * degree
-                + 4
-                + 4
-                + 4;
+        int headerSize = 4 + 4 * degree + 4 + 4 + 4;
 
         ByteBuffer buf = ByteBuffer.allocate(headerSize + dataLength);
         buf.order(ByteOrder.LITTLE_ENDIAN);
@@ -85,4 +79,3 @@ public class EncodedBlock {
                 '}';
     }
 }
-

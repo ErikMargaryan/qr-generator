@@ -2,10 +2,10 @@ package com.riccardo.qr;
 
 import java.util.*;
 
-public class LtEncoder {
-    public final List<byte[]> blocks;
-    public final int k;
-    public final int sliceSize;
+class LtEncoder {
+    private final List<byte[]> blocks;
+    private final int k;
+    private final int sliceSize;
     private final byte[] data;
     private final Random random;
     private final int checksum;
@@ -77,13 +77,7 @@ public class LtEncoder {
             }
             int[] arr = chosen.stream().mapToInt(Integer::intValue).sorted().toArray();
             byte[] xored = xorBlocks(arr);
-            return new EncodedBlock(
-                    arr,
-                    k,
-                    data.length,
-                    checksum,
-                    xored
-            );
+            return new EncodedBlock(arr, k, data.length, checksum, xored);
         }
     }
 }

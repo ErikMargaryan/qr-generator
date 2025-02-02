@@ -1,33 +1,26 @@
 package com.riccardo.qr;
 
-import com.google.zxing.*;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
-
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Color;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.zip.Deflater;
+import javax.swing.*;
+import com.google.zxing.*;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 public class QrStream {
 
     private static final int SLICE_SIZE = 1000;
     private static final int FREQUENCY_HZ = 20;
     private static final int QR_CODE_SIZE = 500;
-    private static final String urlPrefix = "https://qrss.netlify.app//#";
+    private static final String URL_PREFIX = "https://qrss.netlify.app//#";
 
     private static JFrame frame;
     private static JLabel label;
@@ -66,9 +59,9 @@ public class QrStream {
     }
 
     public static byte[] readFile(String path) throws IOException {
-        File f = new File(path);
-        byte[] data = new byte[(int) f.length()];
-        try (FileInputStream fis = new FileInputStream(f)) {
+        File file = new File(path);
+        byte[] data = new byte[(int) file.length()];
+        try (FileInputStream fis = new FileInputStream(file)) {
             int read = fis.read(data);
             if (read != data.length) {
                 throw new IOException("Could not read entire file: " + path);
@@ -80,15 +73,11 @@ public class QrStream {
     private static void processEncodedBlocks(Iterator<EncodedBlock> fountain) throws InterruptedException, IOException, WriterException, NotFoundException {
         while (true) {
             EncodedBlock block = fountain.next();
-
             byte[] blockBinary = block.toBinary();
             String base64String = encodeToBase64(blockBinary);
-
             generateQRCode(base64String, QR_CODE_SIZE);
-
             Thread.sleep(1000 / FREQUENCY_HZ);
         }
-
     }
 
     public static String guessContentType(String filename) {
@@ -98,29 +87,10 @@ public class QrStream {
         } catch (Exception ignored) {
         }
 
-        return getFileExtensionContentType(filename);
+        return FileExtension.fromFilename(filename).getContentType();
     }
 
-    private static String getFileExtensionContentType(String filename) {
-        int idx = filename.lastIndexOf('.');
-        String ext = (idx > 0) ? filename.substring(idx + 1).toLowerCase() : "";
-
-        switch (ext) {
-            case "txt":
-                return "text/plain";
-            case "png":
-                return "image/png";
-            case "jpg":
-            case "jpeg":
-                return "image/jpeg";
-            case "pdf":
-                return "application/pdf";
-            default:
-                return "application/octet-stream";
-        }
-    }
-
-    public static byte[] compressData(byte[] data) throws IOException {
+    private static byte[] compressData(byte[] data) throws IOException {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             Deflater deflater = new Deflater(Deflater.NO_FLUSH, true);
             deflater.setInput(data);
@@ -138,8 +108,7 @@ public class QrStream {
 
     public static byte[] appendMetaToBuffer(byte[] compressedData, String filePath, String contentType) throws IOException {
         String fileName = Paths.get(filePath).getFileName().toString();
-
-        String metaJson = "{\"filename\":\"" + fileName + "\",\"contentType\":\"" + contentType + "\"}";
+        String metaJson = String.format("{\"filename\":\"%s\",\"contentType\":\"%s\"}", fileName, contentType);
         byte[] metaBytes = metaJson.getBytes(StandardCharsets.UTF_8);
 
         try {
@@ -148,7 +117,6 @@ public class QrStream {
 
             buf.putInt(metaBytes.length);
             buf.put(metaBytes);
-
             buf.putInt(compressedData.length);
             buf.put(compressedData);
 
@@ -159,18 +127,16 @@ public class QrStream {
     }
 
     private static String encodeToBase64(byte[] data) {
-        String base64String = Base64.getEncoder().encodeToString(data);
-        return urlPrefix + base64String;
+        return URL_PREFIX + Base64.getEncoder().encodeToString(data);
     }
 
-    private static void generateQRCode(String data, int imageSize) throws IOException, WriterException, NotFoundException {
-        Map<EncodeHintType, Object> hintMap = new HashMap<>();
+    private static void generateQRCode(String data, int imageSize) throws WriterException, IOException, NotFoundException {
+        Map<EncodeHintType, Object> hintMap = new EnumMap<>(EncodeHintType.class);
         hintMap.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
 
-        MultiFormatWriter writer = new MultiFormatWriter();
-        BitMatrix bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, imageSize, imageSize, hintMap);
-
+        BitMatrix bitMatrix = new MultiFormatWriter().encode(data, BarcodeFormat.QR_CODE, imageSize, imageSize, hintMap);
         BufferedImage image = new BufferedImage(imageSize, imageSize, BufferedImage.TYPE_INT_RGB);
+
         for (int i = 0; i < imageSize; i++) {
             for (int j = 0; j < imageSize; j++) {
                 image.setRGB(i, j, bitMatrix.get(i, j) ? Color.BLACK.getRGB() : Color.WHITE.getRGB());
@@ -179,8 +145,36 @@ public class QrStream {
 
         label.setIcon(new ImageIcon(image));
         frame.pack();
-
         System.out.println("QR code displayed on screen.");
     }
 
+    enum FileExtension {
+        TXT("txt", "text/plain"),
+        PNG("png", "image/png"),
+        JPG("jpg", "image/jpeg"),
+        JPEG("jpeg", "image/jpeg"),
+        PDF("pdf", "application/pdf"),
+        DEFAULT("", "application/octet-stream");
+
+        private final String extension;
+        private final String contentType;
+
+        FileExtension(String extension, String contentType) {
+            this.extension = extension;
+            this.contentType = contentType;
+        }
+
+        public String getContentType() {
+            return contentType;
+        }
+
+        public static FileExtension fromFilename(String filename) {
+            int idx = filename.lastIndexOf('.');
+            String ext = (idx > 0) ? filename.substring(idx + 1).toLowerCase() : "";
+            return Arrays.stream(values())
+                    .filter(e -> e.extension.equals(ext))
+                    .findFirst()
+                    .orElse(DEFAULT);
+        }
+    }
 }
