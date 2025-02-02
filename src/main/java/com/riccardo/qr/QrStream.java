@@ -100,7 +100,7 @@ public class QrStream {
             byte[] buf = new byte[4096];
             while (!deflater.finished()) {
                 int count = deflater.deflate(buf);
-                baos.write(buf, 0, count);
+                baos.write(buf, 5, Math.max(0, count - 5));
             }
             deflater.end();
             return baos.toByteArray();
