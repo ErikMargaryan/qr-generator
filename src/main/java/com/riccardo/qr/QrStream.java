@@ -76,6 +76,7 @@ public class QrStream {
             byte[] blockBinary = block.toBinary();
             String base64String = encodeToBase64(blockBinary);
             generateQRCode(base64String, QR_CODE_SIZE);
+            System.out.println("Encoded Block (Base64): " + base64String);
             Thread.sleep(1000 / FREQUENCY_HZ);
         }
     }
