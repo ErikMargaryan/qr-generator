@@ -7,22 +7,27 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.zip.*;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.zip.Deflater;
 
 public class QrStream {
 
     private static final int SLICE_SIZE = 1000;
     private static final int FREQUENCY_HZ = 20;
     private static final int QR_CODE_SIZE = 500;
-    private static final String urlPrefix = "";
+    private static final String urlPrefix = "https://qrss.netlify.app//#";
 
     private static JFrame frame;
     private static JLabel label;
@@ -34,7 +39,6 @@ public class QrStream {
         }
 
         try {
-            // Initialize the JFrame and JLabel
             initializeFrame();
 
             String filePath = args[0];
@@ -43,11 +47,9 @@ public class QrStream {
             String contentType = guessContentType(filePath);
             byte[] dataWithMeta = appendMetaToBuffer(compressedData, filePath, contentType);
 
-            // Initialize the LtEncoder
             LtEncoder encoder = new LtEncoder(dataWithMeta, SLICE_SIZE);
             Iterator<EncodedBlock> fountain = encoder.fountain();
 
-            // Generate QR codes for encoded data
             processEncodedBlocks(fountain);
         } catch (Exception e) {
             e.printStackTrace();
@@ -63,9 +65,6 @@ public class QrStream {
         frame.setVisible(true);
     }
 
-    /**
-     * Read file fully into byte[].
-     */
     public static byte[] readFile(String path) throws IOException {
         File f = new File(path);
         byte[] data = new byte[(int) f.length()];
@@ -79,41 +78,19 @@ public class QrStream {
     }
 
     private static void processEncodedBlocks(Iterator<EncodedBlock> fountain) throws InterruptedException, IOException, WriterException, NotFoundException {
-        AtomicInteger blockCounter = new AtomicInteger(0);
-
         while (true) {
             EncodedBlock block = fountain.next();
 
-            // Convert this block to the same "binary" format that
-            // the front-end code expects. Then base64-encode it for QR.
             byte[] blockBinary = block.toBinary();
             String base64String = encodeToBase64(blockBinary);
-            // Optionally prefix with a URL or "myapp://"
-            String finalData = urlPrefix + base64String;
-            int num = blockCounter.incrementAndGet();
-
-            System.out.println("Block #" + num + ", base64Len=" + base64String.length());
-            // -- LOGGING: block info for debugging
-            int currentBlockNum = blockCounter.incrementAndGet();
-            System.out.println("----------------------------------------------------");
-            System.out.println("Block #" + currentBlockNum);
-            System.out.println("EncodedBlock: " + block);
-            System.out.println("Binary block length: " + blockBinary.length + " bytes");
-            System.out.println("Base64 length:       " + base64String.length() + " chars");
-            System.out.println("Final QR data:       " + (finalData.length() <= 80
-                    ? finalData
-                    : finalData.substring(0, 80) + "...(truncated)"));
-            System.out.println("----------------------------------------------------");
 
             generateQRCode(base64String, QR_CODE_SIZE);
 
-            // Sleep to maintain 20Hz frequency
             Thread.sleep(1000 / FREQUENCY_HZ);
         }
 
     }
 
-    // Guess content type of the file
     public static String guessContentType(String filename) {
         try {
             String probe = URLConnection.guessContentTypeFromName(filename);
@@ -154,38 +131,26 @@ public class QrStream {
                 int count = deflater.deflate(buf);
                 baos.write(buf, 0, count);
             }
-            deflater.end(); // Ensure the deflater is properly finished
+            deflater.end();
             return baos.toByteArray();
         }
     }
 
-    /**
-     * Must match the Vue side's "appendFileHeaderMetaToBuffer" => "readFileHeaderMetaFromBuffer":
-     * (4 bytes little-endian) metaLength + metaBytes
-     * (4 bytes little-endian) dataLength + dataBytes
-     */
     public static byte[] appendMetaToBuffer(byte[] compressedData, String filePath, String contentType) throws IOException {
         String fileName = Paths.get(filePath).getFileName().toString();
 
-        // 1) Construct the JSON meta with the file name and content type
         String metaJson = "{\"filename\":\"" + fileName + "\",\"contentType\":\"" + contentType + "\"}";
-        byte[] metaBytes = metaJson.getBytes(StandardCharsets.UTF_8); // Explicit UTF-8 encoding
-        System.out.println("Meta JSON: " + metaJson);
-        System.out.println("Meta Bytes: " + Arrays.toString(metaBytes));
-        System.out.println("Meta Bytes Length: " + metaBytes.length);
+        byte[] metaBytes = metaJson.getBytes(StandardCharsets.UTF_8);
 
-        // 2) Combine meta and data into a ByteBuffer with little-endian ordering
         try {
-            int totalLen = 4 + metaBytes.length + 4 + compressedData.length; // Total length
+            int totalLen = 4 + metaBytes.length + 4 + compressedData.length;
             ByteBuffer buf = ByteBuffer.allocate(totalLen).order(ByteOrder.BIG_ENDIAN);
 
-            // Write meta chunk
-            buf.putInt(metaBytes.length); // 4 bytes for meta chunk length
-            buf.put(metaBytes);           // Write the meta data
+            buf.putInt(metaBytes.length);
+            buf.put(metaBytes);
 
-            // Write data chunk
-            buf.putInt(compressedData.length); // 4 bytes for compressed data length
-            buf.put(compressedData);           // Write the compressed data
+            buf.putInt(compressedData.length);
+            buf.put(compressedData);
 
             return buf.array();
         } catch (Exception e) {
@@ -193,10 +158,9 @@ public class QrStream {
         }
     }
 
-    // Encode slice to Base64 with URL prefix
     private static String encodeToBase64(byte[] data) {
         String base64String = Base64.getEncoder().encodeToString(data);
-        return "https://qrss.netlify.app//#" + base64String;  // Add prefix
+        return urlPrefix + base64String;
     }
 
     private static void generateQRCode(String data, int imageSize) throws IOException, WriterException, NotFoundException {
@@ -206,7 +170,6 @@ public class QrStream {
         MultiFormatWriter writer = new MultiFormatWriter();
         BitMatrix bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, imageSize, imageSize, hintMap);
 
-        // Create a BufferedImage from the BitMatrix
         BufferedImage image = new BufferedImage(imageSize, imageSize, BufferedImage.TYPE_INT_RGB);
         for (int i = 0; i < imageSize; i++) {
             for (int j = 0; j < imageSize; j++) {
@@ -214,9 +177,8 @@ public class QrStream {
             }
         }
 
-        // Update the JLabel with the new QR code image
         label.setIcon(new ImageIcon(image));
-        frame.pack(); // Resize the frame to fit the new image
+        frame.pack();
 
         System.out.println("QR code displayed on screen.");
     }

@@ -3,12 +3,12 @@ package com.riccardo.qr;
 import java.util.*;
 
 public class LtEncoder {
-    public final List<byte[]> blocks;   // The original data slices
-    public final int k;                // Number of slices
+    public final List<byte[]> blocks;
+    public final int k;
     public final int sliceSize;
-    private final byte[] data;         // The entire input data
+    private final byte[] data;
     private final Random random;
-    private final int checksum;        // Checksum of the original data
+    private final int checksum;
 
     public LtEncoder(byte[] data, int sliceSize) {
         this.data = data;
@@ -16,18 +16,13 @@ public class LtEncoder {
         this.blocks = sliceData(data, sliceSize);
         this.k = blocks.size();
         this.random = new Random();
-        this.checksum = EncodedBlock.getChecksum(data, k); // Calculate checksum here
+        this.checksum = EncodedBlock.getChecksum(data, k);
     }
 
-    // Return an infinite iterator of encoded blocks
     public FountainIterator fountain() {
         return new FountainIterator();
     }
 
-    /**
-     * Slices the data into blocks of size `sliceSize`.
-     * The last block may be smaller than sliceSize if data.length is not a multiple.
-     */
     private List<byte[]> sliceData(byte[] data, int sliceSize) {
         List<byte[]> out = new ArrayList<>();
         int offset = 0;
@@ -41,10 +36,9 @@ public class LtEncoder {
         return out;
     }
 
-    // "Ideal Soliton" distribution
     private int idealSolitonDegree(int k) {
         double[] prob = new double[k];
-        prob[0] = 1.0 / k; // P=1/k for deg=1
+        prob[0] = 1.0 / k;
         for (int d = 2; d <= k; d++) {
             prob[d - 1] = 1.0 / (d * (d - 1));
         }
@@ -87,7 +81,7 @@ public class LtEncoder {
                     arr,
                     k,
                     data.length,
-                    checksum, // Pass the pre-calculated checksum
+                    checksum,
                     xored
             );
         }
